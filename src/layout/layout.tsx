@@ -13,6 +13,7 @@ import { LayoutContext } from './context/layoutcontext';
 import { PrimeReactContext } from 'primereact/api';
 import { ChildContainerProps, LayoutState, AppTopbarRef } from '../types/types';
 import { usePathname, useSearchParams } from 'next/navigation';
+import AppContainer from './AppContainer';
 
 const Layout = ({ children }: ChildContainerProps) => {
     const { layoutConfig, layoutState, setLayoutState } = useContext(LayoutContext);
@@ -128,17 +129,33 @@ const Layout = ({ children }: ChildContainerProps) => {
 
     return (
         <React.Fragment>
-            <div className={containerClass}>
+            {/* <div className={containerClass}>
                 <AppTopbar ref={topbarRef} />
-                {/* <div ref={sidebarRef} className="layout-sidebar">
+                <div ref={sidebarRef} className="layout-sidebar">
                     <AppSidebar />
-                </div> */}
+                </div>
                 <div className="layout-main-container">
                     <div className="layout-main">{children}</div>
-                    {/* <AppFooter /> */}
+                    <AppFooter />
                 </div>
                 <AppConfig />
                 <div className="layout-mask"></div>
+            </div> */}
+            <div className="min-h-screen flex flex-column">
+                <AppTopbar />
+                <div className="p-5 pt-3 flex flex-column flex-auto" style={{ marginTop: '-7rem' }}>
+                    <AppContainer className="flex flex-column flex-auto m-auto">
+                        <div
+                            className="m-auto border-round flex flex-auto"
+                            style={{
+                                width: '100%',
+                                maxWidth: '1152px'
+                            }}
+                        >
+                            {children}
+                        </div>
+                    </AppContainer>
+                </div>
             </div>
         </React.Fragment>
     );

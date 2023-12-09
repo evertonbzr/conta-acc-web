@@ -8,6 +8,14 @@ export interface AppBreadcrumbProps {
     className?: string;
 }
 
+export interface ItemMenu {
+    label: string;
+    icon: string;
+    to?: string;
+    command?: () => void;
+    items?: ItemMenu[];
+}
+
 export interface Breadcrumb {
     labels?: string[];
     to?: string;

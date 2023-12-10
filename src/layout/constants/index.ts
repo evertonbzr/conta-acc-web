@@ -49,6 +49,6 @@ export const sysadmin: ItemMenu[] = [
     {
         label: 'Departamentos',
         icon: 'pi pi-fw pi-book',
-        to: '/departamentos'
+        to: '/departaments'
     }
 ];

@@ -5,9 +5,10 @@ import React, { useContext, useState } from 'react';
 import { Checkbox } from 'primereact/checkbox';
 import { Button } from 'primereact/button';
 import { Password } from 'primereact/password';
-import { LayoutContext } from '../../../../layout/context/layoutcontext';
 import { InputText } from 'primereact/inputtext';
 import { classNames } from 'primereact/utils';
+import { LayoutContext } from '../../../../../layout/context/layoutcontext';
+import Link from 'next/link';
 
 const LoginPage = () => {
     const [password, setPassword] = useState('');
@@ -25,14 +26,15 @@ const LoginPage = () => {
                     style={{
                         borderRadius: '56px',
                         padding: '0.3rem',
-                        background: 'linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)'
+                        background: 'linear-gradient(180deg, var(--gray-900) 10%, rgba(33, 150, 243, 0) 30%)'
                     }}
                 >
                     <div className="w-full surface-card py-8 px-5 sm:px-8" style={{ borderRadius: '53px' }}>
                         <div className="text-center mb-5">
-                            <img src="/demo/images/login/avatar.png" alt="Image" height="50" className="mb-3" />
-                            <div className="text-900 text-3xl font-medium mb-3">Welcome, Isabel!</div>
-                            <span className="text-600 font-medium">Sign in to continue</span>
+                            <div className="text-900 text-3xl font-medium mb-3">Bem-vindo ao ContaACC</div>
+                            <span className="text-600 font-medium">
+                                Não tem conta ainda? <Link href="/auth/register">Cadastre-se</Link>
+                            </span>
                         </div>
 
                         <div>
@@ -55,7 +57,7 @@ const LoginPage = () => {
                                     Forgot password?
                                 </a>
                             </div>
-                            <Button label="Sign In" className="w-full p-3 text-xl" onClick={() => router.push('/')}></Button>
+                            <Button label="Sign In" severity="success" className="w-full" onClick={() => router.push('/')}></Button>
                         </div>
                     </div>
                 </div>

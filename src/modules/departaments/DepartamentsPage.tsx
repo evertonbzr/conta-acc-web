@@ -10,6 +10,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../core/services/api';
 import { Toast } from 'primereact/toast';
 import { ConfirmPopup, confirmPopup } from 'primereact/confirmpopup';
+import { useDebounce } from 'primereact/hooks';
 
 export default function DepartamentsPage() {
     let emptyEntity: any = {
@@ -25,10 +26,11 @@ export default function DepartamentsPage() {
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [entity, setEntity] = useState<any>(emptyEntity);
+    const [search, debouncedSearch, setSearch] = useDebounce('', 400);
 
-    const saveProduct = () => {
-        setSubmitted(true);
-    };
+    useEffect(() => {
+        getEntities(debouncedSearch).then((data) => setEntities(data as any));
+    }, [debouncedSearch]);
 
     const onInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, name: string) => {
         const val = (e.target && e.target.value) || '';
@@ -55,10 +57,18 @@ export default function DepartamentsPage() {
         setEntityDialog(true);
     };
 
-    const getEntities = async () => {
+    const handleSearch = (event: any) => {
+        getEntities(event.target.value).then((data) => setEntities(data as any));
+    };
+
+    const getEntities = async (search = '') => {
         setLoading(true);
         try {
-            const response = await api.get('/departament');
+            const response = await api.get('/department', {
+                params: {
+                    ...(search.length > 0 && { search })
+                }
+            });
             const { data } = await response.data;
             return data.departaments;
         } catch (error) {
@@ -76,10 +86,10 @@ export default function DepartamentsPage() {
         setSubmitted(true);
         try {
             if (entity.id) {
-                await api.put(`/departament/${entity.id}`, entity);
+                await api.put(`/department/${entity.id}`, entity);
                 toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Departamento atualizado com sucesso.' });
             } else {
-                await api.post('/departament', entity);
+                await api.post('/department', entity);
                 toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Departamento criado com sucesso.' });
             }
             await getEntities().then((data) => setEntities(data as any));
@@ -95,7 +105,7 @@ export default function DepartamentsPage() {
     const handleDelete = async (id: string) => {
         setSubmitted(true);
         try {
-            await api.delete(`/departament/${id}`);
+            await api.delete(`/department/${id}`);
             toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Departamento deletado com sucesso.' });
             setEntity(emptyEntity);
             setEntityDialog(false);
@@ -120,35 +130,46 @@ export default function DepartamentsPage() {
             <div className="text-3xl font-medium text-900 mb-3">Departamentos</div>
             <div className="font-medium text-500 mb-3">Segue a lista de departamentos cadastrados</div>
             <div className="border-2 border-round border-300 mt-2">
-                <div className="p-3 flex justify-content-end">
-                    <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className=" mr-2" onClick={openNew} />
+                <div className="p-3 flex align-items-center justify-content-between">
+                    <div>
+                        <span className="p-input-icon-left">
+                            <i className="pi pi-search" />
+                            <InputText value={search} placeholder="Buscar" onChange={(e) => setSearch(e.target.value)} />
+                        </span>
+                    </div>
+                    <div>
+                        <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities()} />
+                        <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} />
+                    </div>
                 </div>
 
-                <DataTable value={entities} emptyMessage="Nenhum departamento encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
+                <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum departamento encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
                     <Column field="name" header="Nome"></Column>
                     <Column field="sede" header="Sede"></Column>
                     <Column
                         body={(rowData: any) => {
                             return (
                                 <>
-                                    <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => openEdit(rowData)} />
-                                    <Button
-                                        icon="pi pi-trash"
-                                        rounded
-                                        severity="warning"
-                                        onClick={(event) => {
-                                            confirmPopup({
-                                                target: event.currentTarget,
-                                                message: 'Deseja realmente excluir este departamento?',
-                                                icon: 'pi pi-info-circle',
-                                                acceptLabel: 'Sim',
-                                                rejectLabel: 'Não',
-                                                acceptClassName: 'p-button-danger',
-                                                accept: () => handleDelete(rowData.id),
-                                                reject: () => {}
-                                            });
-                                        }}
-                                    />
+                                    <span className="p-buttonset">
+                                        <Button size="small" icon="pi pi-pencil" severity="success" onClick={() => openEdit(rowData)} />
+                                        <Button
+                                            icon="pi pi-trash"
+                                            size="small"
+                                            severity="warning"
+                                            onClick={(event) => {
+                                                confirmPopup({
+                                                    target: event.currentTarget,
+                                                    message: 'Deseja realmente excluir este departamento?',
+                                                    icon: 'pi pi-info-circle',
+                                                    acceptLabel: 'Sim',
+                                                    rejectLabel: 'Não',
+                                                    acceptClassName: 'p-button-danger',
+                                                    accept: () => handleDelete(rowData.id),
+                                                    reject: () => {}
+                                                });
+                                            }}
+                                        />
+                                    </span>
                                 </>
                             );
                         }}
@@ -178,7 +199,6 @@ export default function DepartamentsPage() {
                         value={entity.sede}
                         onChange={(e) => onInputChange(e, 'sede')}
                         required
-                        autoFocus
                         className={classNames({
                             'p-invalid': submitted && !entity.sede
                         })}

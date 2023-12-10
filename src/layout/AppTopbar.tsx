@@ -10,7 +10,7 @@ import { AppTopbarRef } from '../types/types';
 import { LayoutContext } from './context/layoutcontext';
 import AppContainer from './AppContainer';
 import { Menu } from 'primereact/menu';
-import { menu } from './constants';
+import { menu, sysadmin } from './constants';
 import { ItemMenu } from '../types/layout';
 import { Avatar } from 'primereact/avatar';
 
@@ -82,7 +82,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
             <AppContainer>
                 <div className="pt-3 align-items-center flex-grow-1 justify-content-between hidden lg:flex absolute lg:static w-full bg-gray-900 left-0 top-100 z-1">
                     <ul className="list-none p-0 m-0 flex lg:align-items-center select-none flex-column lg:flex-row">
-                        {menu.map((item) => {
+                        {sysadmin.map((item) => {
                             if (item.items?.length) {
                                 return <MenuLink item={item} />;
                             }
@@ -93,7 +93,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                                         href={item.to as string}
                                         className="p-ripple flex px-6 p-3 lg:px-3 lg:py-2 align-items-center text-gray-400 hover:text-white hover:bg-gray-800 font-medium border-round cursor-pointer transition-colors transition-duration-150"
                                     >
-                                        <i className="pi pi-home mr-2"></i>
+                                        <i className={classNames('mr-2', item.icon)}></i>
                                         <span>{item.label}</span>
                                         <span className="p-ink" style={{ height: '99.9802px', width: '99.9802px' }}></span>
                                     </Link>

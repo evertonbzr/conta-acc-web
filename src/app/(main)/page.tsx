@@ -1,7 +1,8 @@
 import React from 'react';
+import ListCoursePage from '../../modules/courses/ListCoursePage';
 
-const Dashboard = () => {
-    return <div className="surface-border border-round surface-section flex-1">Teste</div>;
+const Home = () => {
+    return <ListCoursePage />;
 };
 
-export default Dashboard;
+export default Home;

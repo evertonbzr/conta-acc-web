@@ -2,6 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import nookies from 'nookies';
 
 import Link from 'next/link';
 import { classNames } from 'primereact/utils';
@@ -13,6 +14,8 @@ import { Menu } from 'primereact/menu';
 import { menu, sysadmin } from './constants';
 import { ItemMenu } from '../types/layout';
 import { Avatar } from 'primereact/avatar';
+import { ConfirmPopup, confirmPopup } from 'primereact/confirmpopup';
+import { Button } from 'primereact/button';
 
 const MenuLink = ({ item }: { item: ItemMenu }) => {
     const menuLeft = useRef<Menu>(null);
@@ -62,12 +65,28 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
     const menubuttonRef = useRef(null);
     const topbarmenuRef = useRef(null);
     const topbarmenubuttonRef = useRef(null);
-
+    const router = useRouter();
     useImperativeHandle(ref, () => ({
         menubutton: menubuttonRef.current,
         topbarmenu: topbarmenuRef.current,
         topbarmenubutton: topbarmenubuttonRef.current
     }));
+
+    const handleExit = async (event: any) => {
+        confirmPopup({
+            target: event.currentTarget,
+            message: 'Deseja realmente sair da conta?',
+            icon: 'pi pi-info-circle',
+            acceptLabel: 'Sim',
+            rejectLabel: 'Não',
+            acceptClassName: 'p-button-danger',
+            accept: () => {
+                nookies.destroy(null, 'session');
+                router.replace('/auth/login');
+            },
+            reject: () => {}
+        });
+    };
 
     return (
         <div className="bg-gray-900" style={{ height: '250px' }}>
@@ -101,7 +120,19 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                             );
                         })}
                     </ul>
-                    <ul className="list-none p-0 m-0 flex lg:align-items-center select-none flex-column lg:flex-row border-top-1 border-gray-800 lg:border-top-none">{/* ... rest of the code ... */}</ul>
+                    <ul className="list-none p-0 m-0 flex lg:align-items-center select-none flex-column lg:flex-row border-top-1 border-gray-800 lg:border-top-none">
+                        <li>
+                            <a
+                                onClick={handleExit}
+                                className="p-ripple flex px-6 p-3 lg:px-3 lg:py-2 align-items-center text-red-400 hover:text-white hover:bg-red-800 font-medium border-round cursor-pointer transition-colors transition-duration-150"
+                            >
+                                <i className="pi pi-fw pi-sign-out mr-2"></i>
+                                <span>Sair da conta</span>
+                                <span className="p-ink" style={{ height: '120.208px', width: '120.208px' }}></span>
+                            </a>
+                            <ConfirmPopup />
+                        </li>
+                    </ul>
                 </div>
             </AppContainer>
         </div>

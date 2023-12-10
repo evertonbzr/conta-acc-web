@@ -82,7 +82,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
             acceptClassName: 'p-button-danger',
             accept: () => {
                 nookies.destroy(null, 'session');
-                router.replace('/auth/login');
+                location.reload();
             },
             reject: () => {}
         });

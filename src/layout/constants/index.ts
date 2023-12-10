@@ -1,4 +1,4 @@
-import { AppMenuItem, ItemMenu } from '../../types/layout';
+import { ItemMenu } from '../../types/layout';
 
 export const menu: ItemMenu[] = [
     {
@@ -44,11 +44,11 @@ export const sysadmin: ItemMenu[] = [
     {
         label: 'Inicio',
         icon: 'pi pi-fw pi-home',
-        to: '/'
+        to: '/app'
     },
     {
         label: 'Departamentos',
         icon: 'pi pi-fw pi-book',
-        to: '/departaments'
+        to: '/app/departaments'
     }
 ];

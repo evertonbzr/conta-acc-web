@@ -41,8 +41,7 @@ const LoginPage = () => {
                 const { data } = response.data;
                 toast.current?.show({ severity: 'success', summary: 'Bem-vindo', detail: 'Login efetuado com sucesso.', life: 3000 });
                 nookies.set(null, 'session', data.token, { path: '/' });
-                router.refresh();
-                router.replace('/app');
+                location.reload();
             })
             .catch((error) => {
                 toast.current?.show({ severity: 'error', summary: 'Error Message', detail: 'E-mail ou senha incorretos.', life: 3000 });

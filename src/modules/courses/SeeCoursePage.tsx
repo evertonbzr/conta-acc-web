@@ -7,25 +7,28 @@ import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useState } from 'react';
 import { api } from '../../core/services/api';
 import { Dropdown } from 'primereact/dropdown';
 import { useDebounce } from 'primereact/hooks';
 import { useRouter } from 'next/navigation';
+import { Password } from 'primereact/password';
+import { AxiosError } from 'axios';
 
-export default function ListCoursePage() {
+export default function SeeCoursePage({ params }: { params: { id: string; data: any } }) {
+    const { id, data } = params;
     let emptyEntity: any = {
         id: null,
         name: '',
-        department: ''
+        email: '',
+        password: ''
     };
 
     const toastRef = React.useRef<Toast>(null);
 
     const [entities, setEntities] = useState<any[]>([]);
-    const [departaments, setDepartaments] = useState<any[]>([]);
+    const [secondaries, setSecondaries] = useState<any[]>([]); // Course
     const [entityDialog, setEntityDialog] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -35,9 +38,9 @@ export default function ListCoursePage() {
 
     const router = useRouter();
 
-    useEffect(() => {
-        getEntities(debouncedSearch).then((data) => setEntities(data as any));
-    }, [debouncedSearch]);
+    // useEffect(() => {
+    // getEntities(debouncedSearch).then((data) => setEntities(data as any));
+    // }, [debouncedSearch]);
 
     const onInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, name: string) => {
         const val = (e.target && e.target.value) || '';
@@ -53,19 +56,19 @@ export default function ListCoursePage() {
     };
 
     const openNew = () => {
-        if (departaments.length === 0) {
-            getDepartaments().then((data) => setDepartaments(data as any));
-        }
+        // if (secondaries.length === 0) {
+        //     getSecondaries().then((data) => setSecondaries(data as any));
+        // }
         setEntity(emptyEntity);
         setSubmitted(false);
         setEntityDialog(true);
     };
 
     const openEdit = (entity: any) => {
-        if (departaments.length === 0) {
-            getDepartaments().then((data) => setDepartaments(data as any));
-        }
-        setEntity(entity);
+        // if (secondaries.length === 0) {
+        //     getSecondaries().then((data) => setSecondaries(data as any));
+        // }
+        setEntity({ ...entity, password: undefined });
         setSubmitted(false);
         setEntityDialog(true);
     };
@@ -73,15 +76,14 @@ export default function ListCoursePage() {
     const getEntities = async (search = '') => {
         setLoading(true);
         try {
-            const response = await api.get('/course', {
+            const response = await api.get('/user', {
                 params: {
-                    include: 'department',
-                    pageSize: 1000,
-                    ...(search.length > 0 && { search })
+                    courseId: id,
+                    role: 'admin'
                 }
             });
             const { data } = await response.data;
-            return data.courses;
+            return data.users;
         } catch (error) {
             console.log(error);
         } finally {
@@ -89,12 +91,13 @@ export default function ListCoursePage() {
         }
     };
 
-    const getDepartaments = async () => {
+    const getSecondaries = async () => {
         setLoading(true);
         try {
             const response = await api.get('/department');
             const { data } = await response.data;
-            return data.departaments;
+            console.log(data);
+            return [];
         } catch (error) {
             console.log(error);
         } finally {
@@ -104,25 +107,30 @@ export default function ListCoursePage() {
 
     useEffect(() => {
         getEntities().then((data) => setEntities(data as any));
-        getDepartaments().then((data) => setDepartaments(data as any));
+        // getDepartaments().then((data) => setDepartaments(data as any));
     }, []);
 
     const handleSave = async () => {
         setSubmitted(true);
-        const _entity = { ...entity, departmentId: entity.department.id, department: undefined };
+        const _entity = { ...entity, courseId: id, course: undefined, role: 'ADMIN' };
+        console.log(_entity);
         try {
             if (entity.id) {
-                await api.put(`/course/${entity.id}`, _entity);
-                toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Departamento atualizado com sucesso.' });
+                await api.put(`/user/${entity.id}`, _entity);
+                toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Coordernador atualizado com sucesso.' });
             } else {
-                await api.post('/course', _entity);
-                toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Departamento criado com sucesso.' });
+                await api.post('/user', _entity);
+                toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Coordernador criado com sucesso.' });
             }
             await getEntities().then((data) => setEntities(data as any));
             setEntity(emptyEntity);
             setEntityDialog(false);
-        } catch (error) {
-            console.log(error);
+        } catch (error: any) {
+            if (error instanceof AxiosError) {
+                toastRef.current?.show({ severity: 'error', summary: 'Erro', detail: error.response?.data.error });
+            } else {
+                toastRef.current?.show({ severity: 'error', summary: 'Erro', detail: error.message });
+            }
         } finally {
             setSubmitted(false);
         }
@@ -152,33 +160,34 @@ export default function ListCoursePage() {
         <div className="surface-border border-round surface-section flex-1 p-5">
             <Toast ref={toastRef} />
             <ConfirmPopup />
-            <div className="text-3xl font-medium text-900 mb-3">Cursos</div>
-            <div className="font-medium text-500 mb-3">Segue a lista de cursos cadastrados</div>
+            <div className="text-3xl font-medium text-900 mb-3">{data.name}</div>
+            <div className="font-medium text-500 mb-3">
+                {data.department.name} - {data.department.sede}
+            </div>
             <div className="border-2 border-round border-300 mt-2">
                 <div className="p-3 flex align-items-center justify-content-between">
                     <div>
-                        <span className="p-input-icon-left">
+                        {/* <span className="p-input-icon-left">
                             <i className="pi pi-search" />
                             <InputText value={search} placeholder="Buscar" onChange={(e) => setSearch(e.target.value)} />
-                        </span>
+                        </span> */}
                     </div>
                     <div>
                         <Button size="small" label="Recarregar" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities()} />
-                        <Button size="small" label="Novo" icon="pi pi-plus" severity="success" className=" mr-2" onClick={openNew} />
+                        <Button disabled={entities.length > 0} size="small" label="Novo" icon="pi pi-plus" severity="success" className=" mr-2" onClick={openNew} />
                     </div>
                 </div>
 
-                <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum curso encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
+                <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum coordenardor encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
                     <Column field="name" header="Nome"></Column>
-                    <Column field="department.sede" header="Sede"></Column>
-                    <Column field="department.name" header="Departamento"></Column>
+                    <Column field="email" header="E-mail"></Column>
                     <Column
-                        style={{ minWidth: '10rem' }}
+                        style={{ width: '10rem' }}
                         body={(rowData: any) => {
                             return (
                                 <>
                                     <span className="p-buttonset">
-                                        <Button size="small" icon="pi pi-info-circle" severity="info" onClick={() => router.push(`/app/course/${rowData.id}`)} />
+                                        {/* <Button size="small" icon="pi pi-info-circle" severity="info" onClick={() => router.push(`/app/course/${rowData.id}`)} /> */}
                                         <Button icon="pi pi-pencil" size="small" severity="success" onClick={() => openEdit(rowData)} />
                                         <Button
                                             icon="pi pi-trash"
@@ -205,7 +214,7 @@ export default function ListCoursePage() {
                 </DataTable>
             </div>
 
-            <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '450px' }} header={entity.id ? 'Editar Curso' : 'Novo Curso'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+            <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '450px' }} header={entity.id ? 'Editar Coordenador' : 'Novo Coordenador'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
                 <div className="field">
                     <label htmlFor="name">Nome</label>
                     <InputText
@@ -222,21 +231,33 @@ export default function ListCoursePage() {
                 </div>
 
                 <div className="field">
-                    <label htmlFor="department">Departamento</label>
-                    <Dropdown
-                        value={entity.department}
-                        onChange={(e: any) => {
-                            onInputChange(e, 'department');
-                        }}
-                        options={departaments}
-                        optionLabel="name"
-                        placeholder="Selecione o departamento"
-                        className={classNames('w-full', {
-                            'p-invalid': submitted && !entity.department
+                    <label htmlFor="email">E-mail</label>
+                    <InputText
+                        id="email"
+                        value={entity.email}
+                        onChange={(e) => onInputChange(e, 'email')}
+                        required
+                        className={classNames({
+                            'p-invalid': submitted && !entity.email
                         })}
-                        style={{ overflow: 'hidden' }}
                     />
-                    {submitted && !entity.department && <small className="p-invalid">Departamento é requerido.</small>}
+                    {submitted && !entity.email && <small className="p-invalid">E-mail é requerido.</small>}
+                </div>
+
+                <div className="field">
+                    <label htmlFor="password">Senha</label>
+                    <Password
+                        id="password"
+                        toggleMask
+                        feedback={false}
+                        value={entity.password}
+                        onChange={(e) => onInputChange(e, 'password')}
+                        required
+                        className={classNames({
+                            'p-invalid': submitted && !entity.password
+                        })}
+                    />
+                    {submitted && !entity.password && <small className="p-invalid">Senha é requerido.</small>}
                 </div>
             </Dialog>
         </div>

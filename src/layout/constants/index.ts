@@ -62,7 +62,7 @@ export const admin: ItemMenu[] = [
   {
     label: 'Resoluções',
     icon: 'pi pi-fw pi-book',
-    to: '/app/departaments'
+    to: '/app/resolution'
   },
   {
     label: 'Categorias',

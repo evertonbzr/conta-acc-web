@@ -194,7 +194,7 @@ export default function CoordinatorPage() {
                       onClick={(event) => {
                         confirmPopup({
                           target: event.currentTarget,
-                          message: 'Deseja realmente excluir este departamento?',
+                          message: 'Deseja realmente excluir?',
                           icon: 'pi pi-info-circle',
                           acceptLabel: 'Sim',
                           rejectLabel: 'Não',

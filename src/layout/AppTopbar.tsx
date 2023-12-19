@@ -11,7 +11,7 @@ import { AppTopbarRef } from '../types/types';
 import { LayoutContext } from './context/layoutcontext';
 import AppContainer from './AppContainer';
 import { Menu } from 'primereact/menu';
-import { admin, menu, sysadmin } from './constants';
+import { admin, coordinator, menu, sysadmin } from './constants';
 import { ItemMenu } from '../types/layout';
 import { Avatar } from 'primereact/avatar';
 import { ConfirmPopup, confirmPopup } from 'primereact/confirmpopup';
@@ -81,6 +81,8 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
         return sysadmin;
       case 'ADMIN':
         return admin;
+      case 'COORDINATOR':
+        return coordinator;
       default:
         return [];
     }

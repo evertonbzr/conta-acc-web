@@ -17,12 +17,18 @@ import { useInfo } from '../../core/provider';
 import { Dropdown } from 'primereact/dropdown';
 import { useRouter } from 'next/navigation';
 
-export default function CategoriesPage() {
-  const mainLink = '/categories';
+export default function ActivityCategoryPage({ params }: { params: { id: string; data: any } }) {
+  const mainLink = '/activities';
+
+  const { id } = params;
+
   let emptyEntity: any = {
     id: undefined,
     name: null,
-    description: undefined
+    description: undefined,
+    code: null,
+    workloadSemester: undefined,
+    workloadActivity: undefined
   };
 
   const { course } = useInfo();
@@ -34,17 +40,14 @@ export default function CategoriesPage() {
   const [entities, setEntities] = useState<any[]>([]);
   const [entityDialog, setEntityDialog] = useState(false);
   const [secondaries, setSecondaries] = useState<any[]>([]); // Resolutions
-  const [resolution, setResolution] = useState<any>({
-    id: ''
-  });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [entity, setEntity] = useState<any>(emptyEntity);
   const [search, debouncedSearch, setSearch] = useDebounce('', 400);
 
   useEffect(() => {
-    getEntities(debouncedSearch, resolution.id || null).then((data) => setEntities(data as any));
-  }, [debouncedSearch, resolution]);
+    getEntities(debouncedSearch).then((data) => setEntities(data as any));
+  }, [debouncedSearch]);
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, name: string) => {
     const val = (e.target && e.target.value) || '';
@@ -71,14 +74,16 @@ export default function CategoriesPage() {
     setEntityDialog(true);
   };
 
-  const getEntities = async (search = '', resolutionId = '') => {
+  const getEntities = async (search = '') => {
     setLoading(true);
     try {
-      const response = await api.get(mainLink, {
-        params: { resolutionId, ...(search.length > 0 && { search }) }
+      const response = await api.get(mainLink + '/' + id, {
+        params: {
+          ...(search.length > 0 && { search })
+        }
       });
       const { data } = await response.data;
-      return data.categories;
+      return data.activities;
     } catch (error) {
       console.log(error);
     } finally {
@@ -95,13 +100,6 @@ export default function CategoriesPage() {
         }
       });
       const { data } = await response.data;
-
-      if (data.resolutions.length > 0) {
-        const findResolution = data.resolutions.find((resolution: any) => resolution.isCurrent === true);
-        if (findResolution) {
-          setResolution(findResolution);
-        }
-      }
       return data.resolutions;
     } catch (error) {
       console.log(error);
@@ -111,23 +109,25 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
-    getEntities('', resolution.id).then((data) => setEntities(data as any));
+    getEntities('').then((data) => setEntities(data as any));
     getSecondaries().then((data) => setSecondaries(data as any));
   }, []);
 
   const handleSave = async () => {
     setSubmitted(true);
     try {
-      const _entity = { ...entity, resolutionId: resolution.id };
+      const _entity = { ...entity, categoryId: id };
+      _entity.workloadSemester = _entity.workloadSemester ? parseInt(_entity.workloadSemester) : null;
+      _entity.workloadActivity = _entity.workloadActivity ? parseInt(_entity.workloadActivity) : null;
 
       if (entity.id) {
         await api.put(`${mainLink}/${entity.id}`, _entity);
-        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria atualizado com sucesso.' });
+        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Atividade atualizado com sucesso.' });
       } else {
         await api.post(mainLink, _entity);
-        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria criada com sucesso.' });
+        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Atividade criada com sucesso.' });
       }
-      await getEntities('', resolution.id).then((data) => setEntities(data as any));
+      await getEntities('').then((data) => setEntities(data as any));
       setEntity(emptyEntity);
       setEntityDialog(false);
     } catch (error) {
@@ -141,11 +141,11 @@ export default function CategoriesPage() {
     setSubmitted(true);
     try {
       await api.delete(`${mainLink}/${id}`);
-      toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria deletado com sucesso.' });
+      toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Deletado com sucesso.' });
       setEntity(emptyEntity);
       setEntityDialog(false);
     } catch (error) {
-      toastRef.current?.show({ severity: 'error', summary: 'Erro', detail: 'Erro ao deletar categoria.' });
+      toastRef.current?.show({ severity: 'error', summary: 'Erro', detail: 'Erro ao deletar.' });
     } finally {
       setSubmitted(false);
     }
@@ -163,11 +163,8 @@ export default function CategoriesPage() {
       <ConfirmPopup />
       <div className="flex w-full align-items-center justify-content-between">
         <div>
-          <div className="text-3xl font-medium text-900 mb-3">Categorias</div>
-          <div className="font-medium text-500 mb-3">Segue a lista de categorias cadastradas</div>
-        </div>
-        <div>
-          <Dropdown value={resolution} onChange={(e) => setResolution(e.value)} options={secondaries} optionLabel="name" placeholder="Selecione uma resolução" className="w-full" />
+          <div className="text-3xl font-medium text-900 mb-3">Atividades</div>
+          <div className="font-medium text-500 mb-3">Segue a lista de atividades cadastradas</div>
         </div>
       </div>
       <div className="border-2 border-round border-300 mt-2">
@@ -179,13 +176,29 @@ export default function CategoriesPage() {
             </span>
           </div>
           <div>
-            <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities('', resolution.id)} />
-            <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} disabled={!(resolution.id != '')} />
+            <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities()} />
+            <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} />
           </div>
         </div>
 
         <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum dado encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
-          <Column field="name" header="Nome"></Column>
+          <Column field="code" header="Código" rowSpan={1}></Column>
+          <Column field="name" style={{ width: '50%' }} header="Nome" rowSpan={1}></Column>
+          <Column
+            field="workloadActivity"
+            header="CHA"
+            body={(rowData: any) => {
+              return rowData.workloadActivity ? rowData.workloadActivity : '-';
+            }}
+          ></Column>
+          <Column
+            field="workloadSemester"
+            header="CHS"
+            body={(rowData: any) => {
+              return rowData.workloadSemester ? rowData.workloadSemester : '-';
+            }}
+          ></Column>
+
           <Column
             field="createdAt"
             header="Data de criação"
@@ -199,7 +212,6 @@ export default function CategoriesPage() {
               return (
                 <>
                   <span className="p-buttonset">
-                    <Button size="small" icon="pi pi-info-circle" severity="info" onClick={() => router.push(`/app/categories/${rowData.id}`)} />
                     <Button size="small" icon="pi pi-pencil" severity="success" onClick={() => openEdit(rowData)} />
                     <Button
                       icon="pi pi-trash"
@@ -226,7 +238,22 @@ export default function CategoriesPage() {
         </DataTable>
       </div>
 
-      <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '450px' }} header={entity.id ? 'Editar Categoria' : 'Nova Categoria'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+      <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '550px' }} header={entity.id ? 'Editar Atividade' : 'Nova Atividade'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+        <div className="field">
+          <label htmlFor="code">Código</label>
+          <InputText
+            id="code"
+            value={entity.code}
+            onChange={(e) => onInputChange(e, 'code')}
+            required
+            autoFocus
+            placeholder='Ex: "AT01"'
+            className={classNames({
+              'p-invalid': submitted && !entity.code
+            })}
+          />
+          {submitted && !entity.code && <small className="p-invalid">Código é requerido.</small>}
+        </div>
         <div className="field">
           <label htmlFor="name">Nome</label>
           <InputText
@@ -234,13 +261,23 @@ export default function CategoriesPage() {
             value={entity.name}
             onChange={(e) => onInputChange(e, 'name')}
             required
-            autoFocus
             className={classNames({
               'p-invalid': submitted && !entity.name
             })}
           />
           {submitted && !entity.name && <small className="p-invalid">Nome é requerido.</small>}
         </div>
+        <div className="p-fluid formgrid grid">
+          <div className="field col-6">
+            <label htmlFor="workloadActivity">CHA</label>
+            <InputText id="workloadActivity" keyfilter="int" value={entity.workloadActivity} type="text" onChange={(e) => onInputChange(e, 'workloadActivity')} />
+          </div>
+          <div className="field col-6">
+            <label htmlFor="workloadSemester">CHS</label>
+            <InputText id="workloadSemester" keyfilter="int" value={entity.workloadSemester} type="text" onChange={(e) => onInputChange(e, 'workloadSemester')} />
+          </div>
+        </div>
+
         <div className="field">
           <label htmlFor="description">Descrição</label>
           <InputTextarea id="description" value={entity.description} onChange={(e) => onInputChange(e, 'description')} />

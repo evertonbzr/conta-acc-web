@@ -68,10 +68,13 @@ export const admin: ItemMenu[] = [
     label: 'Categorias',
     icon: 'pi pi-fw pi-book',
     to: '/app/categories'
-  },
+  }
+];
+
+export const coordinator: ItemMenu[] = [
   {
-    label: 'Atividades',
-    icon: 'pi pi-fw pi-book',
-    to: '/app/departaments'
+    label: 'Inicio',
+    icon: 'pi pi-fw pi-home',
+    to: '/app'
   }
 ];

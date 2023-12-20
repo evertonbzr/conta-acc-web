@@ -17,12 +17,15 @@ import { useInfo } from '../../core/provider';
 import { Dropdown } from 'primereact/dropdown';
 import { useRouter } from 'next/navigation';
 
-export default function CategoriesPage() {
-  const mainLink = '/categories';
+export default function StudentListPage() {
+  const mainLink = '/student';
+
   let emptyEntity: any = {
     id: undefined,
-    name: null,
-    description: undefined
+    name: undefined,
+    email: undefined,
+    enrollId: undefined,
+    password: undefined
   };
 
   const { course } = useInfo();
@@ -34,17 +37,14 @@ export default function CategoriesPage() {
   const [entities, setEntities] = useState<any[]>([]);
   const [entityDialog, setEntityDialog] = useState(false);
   const [secondaries, setSecondaries] = useState<any[]>([]); // Resolutions
-  const [resolution, setResolution] = useState<any>({
-    id: ''
-  });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [entity, setEntity] = useState<any>(emptyEntity);
   const [search, debouncedSearch, setSearch] = useDebounce('', 400);
 
   useEffect(() => {
-    getEntities(debouncedSearch, resolution.id || null).then((data) => setEntities(data as any));
-  }, [debouncedSearch, resolution]);
+    getEntities(debouncedSearch).then((data) => setEntities(data as any));
+  }, [debouncedSearch]);
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, name: string) => {
     const val = (e.target && e.target.value) || '';
@@ -66,19 +66,22 @@ export default function CategoriesPage() {
   };
 
   const openEdit = (entity: any) => {
-    setEntity(entity);
+    setEntity({ name: entity.user.name, email: entity.user.email, enrollId: entity.enrollId, id: entity.id });
     setSubmitted(false);
     setEntityDialog(true);
   };
 
-  const getEntities = async (search = '', resolutionId = '') => {
+  const getEntities = async (search = '') => {
     setLoading(true);
     try {
       const response = await api.get(mainLink, {
-        params: { resolutionId, ...(search.length > 0 && { search }) }
+        params: {
+          include: 'user',
+          ...(search.length > 0 && { search })
+        }
       });
       const { data } = await response.data;
-      return data.categories;
+      return data.students;
     } catch (error) {
       console.log(error);
     } finally {
@@ -95,13 +98,6 @@ export default function CategoriesPage() {
         }
       });
       const { data } = await response.data;
-
-      if (data.resolutions.length > 0) {
-        const findResolution = data.resolutions.find((resolution: any) => resolution.isCurrent === true);
-        if (findResolution) {
-          setResolution(findResolution);
-        }
-      }
       return data.resolutions;
     } catch (error) {
       console.log(error);
@@ -110,28 +106,24 @@ export default function CategoriesPage() {
     }
   };
 
-  const loadEntities = async (search = '') => {
-    getEntities(search, resolution.id).then((data) => setEntities(data as any));
-  };
-
   useEffect(() => {
-    loadEntities();
+    getEntities('').then((data) => setEntities(data as any));
     getSecondaries().then((data) => setSecondaries(data as any));
   }, []);
 
   const handleSave = async () => {
     setSubmitted(true);
     try {
-      const _entity = { ...entity, resolutionId: resolution.id };
+      const _entity = { ...entity };
 
       if (entity.id) {
         await api.put(`${mainLink}/${entity.id}`, _entity);
-        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria atualizado com sucesso.' });
+        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Aluno atualizado com sucesso.' });
       } else {
         await api.post(mainLink, _entity);
-        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria criada com sucesso.' });
+        toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Aluno criada com sucesso.' });
       }
-      await getEntities('', resolution.id).then((data) => setEntities(data as any));
+      await getEntities('').then((data) => setEntities(data as any));
       setEntity(emptyEntity);
       setEntityDialog(false);
     } catch (error) {
@@ -145,11 +137,11 @@ export default function CategoriesPage() {
     setSubmitted(true);
     try {
       await api.delete(`${mainLink}/${id}`);
-      toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria deletado com sucesso.' });
+      toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Deletado com sucesso.' });
       setEntity(emptyEntity);
       setEntityDialog(false);
     } catch (error) {
-      toastRef.current?.show({ severity: 'error', summary: 'Erro', detail: 'Erro ao deletar categoria.' });
+      toastRef.current?.show({ severity: 'error', summary: 'Erro', detail: 'Erro ao deletar.' });
     } finally {
       setSubmitted(false);
     }
@@ -167,11 +159,8 @@ export default function CategoriesPage() {
       <ConfirmPopup />
       <div className="flex w-full align-items-center justify-content-between">
         <div>
-          <div className="text-3xl font-medium text-900 mb-3">Categorias</div>
-          <div className="font-medium text-500 mb-3">Segue a lista de categorias cadastradas</div>
-        </div>
-        <div>
-          <Dropdown value={resolution} onChange={(e) => setResolution(e.value)} options={secondaries} optionLabel="name" placeholder="Selecione uma resolução" className="w-full" />
+          <div className="text-3xl font-medium text-900 mb-3">Alunos</div>
+          <div className="font-medium text-500 mb-3">Segue a lista de atividades cadastradas do curso: {course.name}</div>
         </div>
       </div>
       <div className="border-2 border-round border-300 mt-2">
@@ -183,16 +172,20 @@ export default function CategoriesPage() {
             </span>
           </div>
           <div>
-            <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => loadEntities()} />
-            <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} disabled={!(resolution.id != '')} />
+            <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities()} />
+            <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} />
           </div>
         </div>
 
         <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum dado encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
-          <Column field="name" header="Nome"></Column>
+          <Column field="user.name" style={{ maxWidth: '20%' }} header="Nome"></Column>
+          <Column field="user.email" header="E-mail"></Column>
+
+          <Column field="enrollId" header="Matrícula"></Column>
+
           <Column
             field="createdAt"
-            header="Data de criação"
+            header="Status"
             body={(rowData: any) => {
               return DateTime.fromJSDate(new Date(rowData.createdAt)).toFormat('dd/MM/yyyy');
             }}
@@ -203,7 +196,6 @@ export default function CategoriesPage() {
               return (
                 <>
                   <span className="p-buttonset">
-                    <Button size="small" icon="pi pi-info-circle" severity="info" onClick={() => router.push(`/app/categories/${rowData.id}`)} />
                     <Button size="small" icon="pi pi-pencil" severity="success" onClick={() => openEdit(rowData)} />
                     <Button
                       icon="pi pi-trash"
@@ -230,7 +222,7 @@ export default function CategoriesPage() {
         </DataTable>
       </div>
 
-      <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '450px' }} header={entity.id ? 'Editar Categoria' : 'Nova Categoria'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+      <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '550px' }} header={entity.id ? 'Editar Aluno' : 'Nova Aluno'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
         <div className="field">
           <label htmlFor="name">Nome</label>
           <InputText
@@ -238,7 +230,6 @@ export default function CategoriesPage() {
             value={entity.name}
             onChange={(e) => onInputChange(e, 'name')}
             required
-            autoFocus
             className={classNames({
               'p-invalid': submitted && !entity.name
             })}
@@ -246,8 +237,43 @@ export default function CategoriesPage() {
           {submitted && !entity.name && <small className="p-invalid">Nome é requerido.</small>}
         </div>
         <div className="field">
-          <label htmlFor="description">Descrição</label>
-          <InputTextarea id="description" value={entity.description} onChange={(e) => onInputChange(e, 'description')} />
+          <label htmlFor="email">E-mail</label>
+          <InputText
+            id="email"
+            value={entity.email}
+            onChange={(e) => onInputChange(e, 'email')}
+            required
+            className={classNames({
+              'p-invalid': submitted && !entity.email
+            })}
+          />
+          {submitted && !entity.code && <small className="p-invalid">Código é requerido.</small>}
+        </div>
+        <div className="field">
+          <label htmlFor="enrollId">Matrícula</label>
+          <InputText
+            id="enrollId"
+            value={entity.enrollId}
+            onChange={(e) => onInputChange(e, 'enrollId')}
+            required
+            className={classNames({
+              'p-invalid': submitted && !entity.enrollId
+            })}
+          />
+          {submitted && !entity.enrollId && <small className="p-invalid">Matrícula é requerido.</small>}
+        </div>
+        <div className="field">
+          <label htmlFor="password">Senha</label>
+          <InputText
+            id="password"
+            value={entity.password}
+            onChange={(e) => onInputChange(e, 'password')}
+            required
+            className={classNames({
+              'p-invalid': submitted && !entity.password
+            })}
+          />
+          {submitted && !entity.password && <small className="p-invalid">Senha é requerido.</small>}
         </div>
       </Dialog>
     </div>

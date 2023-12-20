@@ -78,3 +78,16 @@ export const coordinator: ItemMenu[] = [
     to: '/app'
   }
 ];
+
+export const student: ItemMenu[] = [
+  {
+    label: 'Inicio',
+    icon: 'pi pi-fw pi-home',
+    to: '/app'
+  },
+  {
+    label: 'Notificações',
+    icon: 'pi pi-fw pi-bell',
+    to: '/app/notifications'
+  }
+];

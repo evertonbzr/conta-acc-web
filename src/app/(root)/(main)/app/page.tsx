@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import ListCoursePage from '../../../../modules/courses/ListCoursePage';
 import { useInfo } from '../../../../core/provider';
 import CoordinatorPage from '../../../../modules/coordinators/CoordinatorPage';
+import StudentListPage from '../../../../modules/students/Student';
+import StudentHomePage from '../../../../modules/students/StudentHome';
 
 export default function Home() {
   const { user } = useInfo();
@@ -12,10 +14,10 @@ export default function Home() {
         return <ListCoursePage />;
       case 'ADMIN':
         return <CoordinatorPage />;
-      case 'TEACHER':
-        return <ListCoursePage />;
+      case 'COORDINATOR':
+        return <StudentListPage />;
       case 'STUDENT':
-        return <ListCoursePage />;
+        return <StudentHomePage />;
       default:
         return <ListCoursePage />;
     }

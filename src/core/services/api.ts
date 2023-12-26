@@ -1,7 +1,7 @@
+import { createClient } from '@internal/sdk';
 import axios from 'axios';
 import nookies from 'nookies';
 
-// Create an axios instance
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
@@ -9,13 +9,14 @@ const api = axios.create({
   }
 });
 
-// Interceptor to add Authorization header before each request is sent
-api.interceptors.request.use((config) => {
-  // Get token from cookies
+const sdk = createClient({
+  axios: api
+});
+
+sdk.axiosInstance.interceptors.request.use((config) => {
   const cookies = nookies.get(null);
   const token = cookies ? cookies.session : null;
 
-  // Add Authorization header if token is available
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,4 +24,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export { api };
+api.interceptors.request.use((config) => {
+  const cookies = nookies.get(null);
+  const token = cookies ? cookies.session : null;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+export { api, sdk };

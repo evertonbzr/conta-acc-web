@@ -16,6 +16,7 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { useInfo } from '../../core/provider';
 import { Dropdown } from 'primereact/dropdown';
 import { useRouter } from 'next/navigation';
+import { Checkbox } from 'primereact/checkbox';
 
 export default function ActivityCategoryPage({ params }: { params: { id: string; data: any } }) {
   const mainLink = '/activities';
@@ -28,12 +29,9 @@ export default function ActivityCategoryPage({ params }: { params: { id: string;
     description: undefined,
     code: null,
     workloadSemester: undefined,
-    workloadActivity: undefined
+    workloadActivity: undefined,
+    workloadInput: false
   };
-
-  const { course } = useInfo();
-
-  const router = useRouter();
 
   const toastRef = React.useRef<Toast>(null);
 
@@ -176,12 +174,27 @@ export default function ActivityCategoryPage({ params }: { params: { id: string;
             </span>
           </div>
           <div>
-            <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities()} />
+            <Button
+              label="Recarregar"
+              size="small"
+              icon="pi pi-refresh"
+              className="mr-2"
+              severity="info"
+              onClick={() => getEntities().then((data) => setEntities(data as any))}
+            />
             <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} />
           </div>
         </div>
 
-        <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum dado encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
+        <DataTable
+          size="small"
+          stripedRows
+          value={entities}
+          emptyMessage="Nenhum dado encontrado."
+          loading={loading}
+          className="border-round"
+          tableStyle={{ minWidth: '50rem' }}
+        >
           <Column field="code" header="Código" rowSpan={1}></Column>
           <Column field="name" style={{ width: '50%' }} header="Nome" rowSpan={1}></Column>
           <Column
@@ -238,7 +251,16 @@ export default function ActivityCategoryPage({ params }: { params: { id: string;
         </DataTable>
       </div>
 
-      <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '550px' }} header={entity.id ? 'Editar Atividade' : 'Nova Atividade'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+      <Dialog
+        closeOnEscape={false}
+        visible={entityDialog}
+        style={{ width: '550px' }}
+        header={entity.id ? 'Editar Atividade' : 'Nova Atividade'}
+        modal
+        className="p-fluid"
+        footer={entityDialogFooter}
+        onHide={hideDialog}
+      >
         <div className="field">
           <label htmlFor="code">Código</label>
           <InputText
@@ -270,11 +292,43 @@ export default function ActivityCategoryPage({ params }: { params: { id: string;
         <div className="p-fluid formgrid grid">
           <div className="field col-6">
             <label htmlFor="workloadActivity">CHA</label>
-            <InputText id="workloadActivity" keyfilter="int" value={entity.workloadActivity} type="text" onChange={(e) => onInputChange(e, 'workloadActivity')} />
+            <InputText
+              id="workloadActivity"
+              keyfilter="int"
+              value={entity.workloadActivity}
+              type="text"
+              disabled={entity.workloadInput}
+              onChange={(e) => onInputChange(e, 'workloadActivity')}
+            />
+            <div className="flex mt-2 align-items-center">
+              <Checkbox
+                inputId="workloadInput"
+                name="workloadInput"
+                onChange={(e) => {
+                  let _entity = { ...entity };
+                  _entity[`workloadInput`] = e.checked;
+                  _entity[`workloadActivity`] = '';
+
+                  console.log(_entity);
+
+                  setEntity(_entity);
+                }}
+                checked={entity.workloadInput}
+              />
+              <label htmlFor="workloadInput" className="ml-2">
+                Valor do certificado
+              </label>
+            </div>
           </div>
           <div className="field col-6">
             <label htmlFor="workloadSemester">CHS</label>
-            <InputText id="workloadSemester" keyfilter="int" value={entity.workloadSemester} type="text" onChange={(e) => onInputChange(e, 'workloadSemester')} />
+            <InputText
+              id="workloadSemester"
+              keyfilter="int"
+              value={entity.workloadSemester}
+              type="text"
+              onChange={(e) => onInputChange(e, 'workloadSemester')}
+            />
           </div>
         </div>
 

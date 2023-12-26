@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@internal/sdk": "git+ssh://git@github.com/labens-ufrn/conta-acc-sdk-js.git#main-23-12-26-01-08-17-e380d2b",
     "@types/node": "20.3.1",
     "@types/react": "18.2.12",
     "@types/react-dom": "18.2.5",

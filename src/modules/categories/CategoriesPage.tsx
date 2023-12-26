@@ -7,7 +7,7 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useState } from 'react';
-import { api } from '../../core/services/api';
+import { api, sdk } from '../../core/services/api';
 import { Toast } from 'primereact/toast';
 import { ConfirmPopup, confirmPopup } from 'primereact/confirmpopup';
 import { useDebounce } from 'primereact/hooks';
@@ -22,10 +22,10 @@ export default function CategoriesPage() {
   let emptyEntity: any = {
     id: undefined,
     name: null,
-    description: undefined
+    description: undefined,
+    minPoints: undefined,
+    maxPoints: undefined
   };
-
-  const { course } = useInfo();
 
   const router = useRouter();
 
@@ -110,25 +110,29 @@ export default function CategoriesPage() {
     }
   };
 
-  const loadEntities = async (search = '') => {
-    getEntities(search, resolution.id).then((data) => setEntities(data as any));
-  };
-
   useEffect(() => {
-    loadEntities();
+    getEntities('', resolution.id).then((data) => setEntities(data as any));
     getSecondaries().then((data) => setSecondaries(data as any));
   }, []);
 
   const handleSave = async () => {
     setSubmitted(true);
     try {
-      const _entity = { ...entity, resolutionId: resolution.id };
+      const _entity = {
+        ...entity,
+        resolutionId: resolution.id,
+        ...(entity.minPoints ? { minPoints: parseInt(entity.minPoints) } : { minPoints: null }),
+        ...(entity.maxPoints ? { maxPoints: parseInt(entity.maxPoints) } : { maxPoints: null })
+      };
 
       if (entity.id) {
         await api.put(`${mainLink}/${entity.id}`, _entity);
         toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria atualizado com sucesso.' });
       } else {
-        await api.post(mainLink, _entity);
+        await sdk.categories.createCategory({
+          body: _entity
+        });
+        // await api.post(mainLink, _entity);
         toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Categoria criada com sucesso.' });
       }
       await getEntities('', resolution.id).then((data) => setEntities(data as any));
@@ -171,7 +175,14 @@ export default function CategoriesPage() {
           <div className="font-medium text-500 mb-3">Segue a lista de categorias cadastradas</div>
         </div>
         <div>
-          <Dropdown value={resolution} onChange={(e) => setResolution(e.value)} options={secondaries} optionLabel="name" placeholder="Selecione uma resolução" className="w-full" />
+          <Dropdown
+            value={resolution}
+            onChange={(e) => setResolution(e.value)}
+            options={secondaries}
+            optionLabel="name"
+            placeholder="Selecione uma resolução"
+            className="w-full"
+          />
         </div>
       </div>
       <div className="border-2 border-round border-300 mt-2">
@@ -183,12 +194,35 @@ export default function CategoriesPage() {
             </span>
           </div>
           <div>
-            <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => loadEntities()} />
-            <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} disabled={!(resolution.id != '')} />
+            <Button
+              label="Recarregar"
+              size="small"
+              icon="pi pi-refresh"
+              className="mr-2"
+              severity="info"
+              onClick={() => getEntities('', resolution.id).then((data) => setEntities(data as any))}
+            />
+            <Button
+              label="Novo"
+              size="small"
+              icon="pi pi-plus"
+              severity="success"
+              className="mr-2"
+              onClick={openNew}
+              disabled={!(resolution.id != '')}
+            />
           </div>
         </div>
 
-        <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum dado encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
+        <DataTable
+          size="small"
+          stripedRows
+          value={entities}
+          emptyMessage="Nenhum dado encontrado."
+          loading={loading}
+          className="border-round"
+          tableStyle={{ minWidth: '50rem' }}
+        >
           <Column field="name" header="Nome"></Column>
           <Column
             field="createdAt"
@@ -230,7 +264,16 @@ export default function CategoriesPage() {
         </DataTable>
       </div>
 
-      <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '450px' }} header={entity.id ? 'Editar Categoria' : 'Nova Categoria'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+      <Dialog
+        closeOnEscape={false}
+        visible={entityDialog}
+        style={{ width: '450px' }}
+        header={entity.id ? 'Editar Categoria' : 'Nova Categoria'}
+        modal
+        className="p-fluid"
+        footer={entityDialogFooter}
+        onHide={hideDialog}
+      >
         <div className="field">
           <label htmlFor="name">Nome</label>
           <InputText
@@ -248,6 +291,16 @@ export default function CategoriesPage() {
         <div className="field">
           <label htmlFor="description">Descrição</label>
           <InputTextarea id="description" value={entity.description} onChange={(e) => onInputChange(e, 'description')} />
+        </div>
+        <div className="p-fluid formgrid grid">
+          {/* <div className="field col-6">
+            <label htmlFor="minPoints">Minimo de pontos(opcional)</label>
+            <InputText id="minPoints" keyfilter="int" value={entity.minPoints} type="text" onChange={(e) => onInputChange(e, 'minPoints')} />
+          </div> */}
+          <div className="field col-12">
+            <label htmlFor="maxPoints">Maximo de pontos(opcional)</label>
+            <InputText id="maxPoints" keyfilter="int" value={entity.maxPoints} type="text" onChange={(e) => onInputChange(e, 'maxPoints')} />
+          </div>
         </div>
       </Dialog>
     </div>

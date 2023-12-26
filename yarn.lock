@@ -65,6 +65,10 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-2.0.1.tgz#e5211452df060fa8522b55c7b3c0c4d1981cb044"
   integrity sha512-dvuCeX5fC9dXgJn9t+X5atfmgQAzUOWqS1254Gh0m6i8wKd10ebXkfNKiRK+1GWi/yTvvLDHpoxLr0xxxeslWw==
 
+"@internal/sdk@git+ssh://git@github.com/labens-ufrn/conta-acc-sdk-js.git#main-23-12-26-01-08-17-e380d2b":
+  version "1.0.0"
+  resolved "git+ssh://git@github.com/labens-ufrn/conta-acc-sdk-js.git#b5fa67ff2e685d605a88a601fa87f37d1ca5953e"
+
 "@kurkle/color@^0.3.0":
   version "0.3.2"
   resolved "https://registry.yarnpkg.com/@kurkle/color/-/color-0.3.2.tgz#5acd38242e8bde4f9986e7913c8fdf49d3aa199f"

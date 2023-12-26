@@ -6,8 +6,8 @@ import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useState } from 'react';
-import { api } from '../../core/services/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { api, sdk } from '../../core/services/api';
 import { Toast } from 'primereact/toast';
 import { ConfirmPopup, confirmPopup } from 'primereact/confirmpopup';
 import { useDebounce } from 'primereact/hooks';
@@ -18,13 +18,16 @@ import { Dropdown } from 'primereact/dropdown';
 import { useRouter } from 'next/navigation';
 import { Chart } from 'primereact/chart';
 import { ProgressBar } from 'primereact/progressbar';
+import { Tooltip } from 'primereact/tooltip';
 
 export default function StudentHomePage() {
   const mainLink = '/student/me/review';
 
   let emptyEntity: any = {
     id: undefined,
-    activityId: undefined
+    activityId: undefined,
+    name: null,
+    link: undefined
   };
 
   const { course, user } = useInfo();
@@ -42,7 +45,15 @@ export default function StudentHomePage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [entity, setEntity] = useState<any>(emptyEntity);
+  const [info, setInfo] = useState<any>(null); // info
   const [search, debouncedSearch, setSearch] = useDebounce('', 400);
+
+  const percent = useMemo(() => {
+    if (info) {
+      return Math.round((info.sumOfPoints / info.resolution.totalPoints) * 100);
+    }
+    return 0;
+  }, [info]);
 
   useEffect(() => {
     getEntities(debouncedSearch).then((data) => setEntities(data as any));
@@ -84,13 +95,31 @@ export default function StudentHomePage() {
   const getEntities = async (search = '') => {
     setLoading(true);
     try {
-      const response = await api.get('student/me/review', {
-        params: {
+      const response = await sdk.student.listReviewActivities({
+        query: {
           ...(search.length > 0 && { search })
         }
       });
       const { data } = await response.data;
-      return data.activities;
+      if (data.activities) {
+        return data.activities.filter((item: any) => item.status !== 'REJECTED');
+      }
+      return [];
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getInfo = async () => {
+    setLoading(true);
+    try {
+      const response = await sdk.student.infoActivities({
+        query: {}
+      });
+      const { data } = await response.data;
+      return data;
     } catch (error) {
       console.log(error);
     } finally {
@@ -102,8 +131,17 @@ export default function StudentHomePage() {
     setActivities([]);
     setLoading(true);
     try {
-      const response = await api.get('/activities/' + categoryId, {
+      // const response = await api.get('/activities/' + categoryId, {
+      //   params: {
+      //     pageSize: 9999
+      //   }
+      // });
+
+      const response = await sdk.activities.listActivities({
         params: {
+          categoryId
+        },
+        query: {
           pageSize: 9999
         }
       });
@@ -143,21 +181,31 @@ export default function StudentHomePage() {
   useEffect(() => {
     getEntities('').then((data) => setEntities(data as any));
     getResolutions().then((data) => setResolution(data as any));
+    getInfo().then((data) => setInfo(data as any));
   }, []);
 
   const handleSave = async () => {
     setSubmitted(true);
     try {
-      const _entity = { activityId: entity.activity.activityId };
+      const _entity = {
+        activityId: entity.activity.activityId,
+        name: entity.name,
+        link: entity.link,
+        ...(entity.value ? { value: parseInt(entity.value) } : { value: null })
+      };
 
       if (entity.id) {
         await api.put(`${mainLink}/${entity.id}`, _entity);
         toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Registro atualizado com sucesso.' });
       } else {
-        await api.post(mainLink, _entity);
+        await sdk.student.newActivity({
+          body: _entity
+        });
+        // await api.post(mainLink, _entity);
         toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Registro criada com sucesso.' });
       }
       await getEntities('').then((data) => setEntities(data as any));
+      await getInfo().then((data) => setInfo(data as any));
       setEntity(emptyEntity);
       setEntityDialog(false);
     } catch (error) {
@@ -170,10 +218,12 @@ export default function StudentHomePage() {
   const handleDelete = async (id: string) => {
     setSubmitted(true);
     try {
-      await api.delete(`${mainLink}/${id}`);
+      await api.delete(`/student/activities/${id}`);
       toastRef.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Deletado com sucesso.' });
       setEntity(emptyEntity);
       setEntityDialog(false);
+      await getEntities('').then((data) => setEntities(data as any));
+      await getInfo().then((data) => setInfo(data as any));
     } catch (error) {
       toastRef.current?.show({ severity: 'error', summary: 'Erro', detail: 'Erro ao deletar.' });
     } finally {
@@ -184,7 +234,7 @@ export default function StudentHomePage() {
   const entityDialogFooter = (
     <>
       <Button label="Cancelar" icon="pi pi-times" text onClick={hideDialog} />
-      <Button label="Salvar" icon="pi pi-check" onClick={handleSave} />
+      <Button label="Salvar" disabled={submitted} icon="pi pi-check" onClick={handleSave} />
     </>
   );
   return (
@@ -192,6 +242,9 @@ export default function StudentHomePage() {
       <div className="p-2">
         <div className="card mb-2">
           <p className="m-0 text-2xl">Olá {user.name}, seja bem-vindo(a)</p>
+        </div>
+        <div className="card">
+          <h5 className="m-0">{resolution && resolution.name + ', ' + resolution.totalPoints + ' pontos'}</h5>
         </div>
       </div>
       {/* <div className="grid">
@@ -210,7 +263,34 @@ export default function StudentHomePage() {
         </div>
       </div> */}
       <div className="grid p-2">
-        <div className="col-12 xl:col-8">
+        <div className="col-12">
+          <div className="card p-3">
+            <div className="flex w-full align-items-center justify-content-between">
+              <div className="flex-1 flex align-items-center">
+                <h5 className="mb-0">Status: </h5>
+                {info && (
+                  <p className=" mb-0 font-medium ml-2">
+                    {info.sumOfPoints}/{info.resolution.totalPoints} pontos
+                  </p>
+                )}
+              </div>
+              <div className="flex-1">
+                <div>
+                  <Tooltip mouseTrack mouseTrackLeft={10} target=".custom-target-icon" />
+
+                  <span className="font-medium">Total</span>
+                  <ProgressBar
+                    data-pr-tooltip={`${percent}%`}
+                    color={documentStyle.getPropertyValue('--blue-500')}
+                    className="mt-2 custom-target-icon"
+                    value={percent}
+                  ></ProgressBar>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-12">
           <div className="card flex-1 p-5">
             <Toast ref={toastRef} />
             <ConfirmPopup />
@@ -226,38 +306,75 @@ export default function StudentHomePage() {
                   </span>
                 </div>
                 <div>
-                  <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities()} />
+                  <Button
+                    label="Recarregar"
+                    size="small"
+                    icon="pi pi-refresh"
+                    className="mr-2"
+                    severity="info"
+                    onClick={() => getEntities().then((data) => setEntities(data as any))}
+                  />
                   <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} />
                 </div>
               </div>
 
               <DataTable size="small" paginator rows={5} stripedRows value={entities} emptyMessage="Nenhum dado encontrado." loading={loading}>
-                <Column field="activityOnCategory.code" header="Código"></Column>
-                <Column field="activityOnCategory.name" header="Nome"></Column>
+                <Column field="name" header="Nome"></Column>
+                <Column field="activityOnCategory.name" header="Atividade"></Column>
+                <Column
+                  header="Atividade"
+                  body={(rowData: any) => {
+                    if (rowData.link) {
+                      return (
+                        <>
+                          <a
+                            href={rowData.link}
+                            target="_blank"
+                            className="p-button p-component p-button-text-icon-left p-button-plain p-button-sm p-button-text"
+                          >
+                            Abrir
+                          </a>
+                        </>
+                      );
+                    } else {
+                      return (
+                        <>
+                          <a
+                            href={rowData.link}
+                            target="_blank"
+                            className="p-button p-component p-button-text-icon-left p-button-plain p-button-sm p-button-text"
+                          >
+                            Sem link
+                          </a>
+                        </>
+                      );
+                    }
+                  }}
+                ></Column>
+                <Column field="semester" header="Semestre"></Column>
+
                 <Column
                   body={(rowData: any) => {
                     return (
                       <>
-                        <span className="p-buttonset">
-                          <Button size="small" icon="pi pi-pencil" severity="success" onClick={() => openEdit(rowData)} />
-                          <Button
-                            icon="pi pi-trash"
-                            size="small"
-                            severity="warning"
-                            onClick={(event) => {
-                              confirmPopup({
-                                target: event.currentTarget,
-                                message: 'Deseja realmente excluir?',
-                                icon: 'pi pi-info-circle',
-                                acceptLabel: 'Sim',
-                                rejectLabel: 'Não',
-                                acceptClassName: 'p-button-danger',
-                                accept: () => handleDelete(rowData.id),
-                                reject: () => {}
-                              });
-                            }}
-                          />
-                        </span>
+                        <Button
+                          icon="pi pi-trash"
+                          size="small"
+                          severity="warning"
+                          className="rounded-sm"
+                          onClick={(event) => {
+                            confirmPopup({
+                              target: event.currentTarget,
+                              message: 'Deseja realmente excluir?',
+                              icon: 'pi pi-info-circle',
+                              acceptLabel: 'Sim',
+                              rejectLabel: 'Não',
+                              acceptClassName: 'p-button-danger',
+                              accept: () => handleDelete(rowData.id),
+                              reject: () => {}
+                            });
+                          }}
+                        />
                       </>
                     );
                   }}
@@ -265,7 +382,33 @@ export default function StudentHomePage() {
               </DataTable>
             </div>
 
-            <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '550px' }} header={entity.id ? 'Editar Registro' : 'Novo Registro'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+            <Dialog
+              closeOnEscape={false}
+              visible={entityDialog}
+              style={{ width: '550px' }}
+              header={entity.id ? 'Editar Registro' : 'Novo Registro'}
+              modal
+              className="p-fluid"
+              footer={entityDialogFooter}
+              onHide={hideDialog}
+            >
+              <div className="field">
+                <label htmlFor="name">Nome</label>
+                <InputText
+                  value={entity.name}
+                  onChange={(e: any) => {
+                    onInputChange(e, 'name');
+                  }}
+                  placeholder="Digite um nome"
+                  className={classNames('w-full', {
+                    'p-invalid': submitted && !entity.name
+                  })}
+                  required
+                  autoFocus
+                  style={{ overflow: 'hidden' }}
+                />
+                {submitted && !entity.name && <small className="p-invalid">Nome é requerido.</small>}
+              </div>
               <div className="field">
                 <label htmlFor="category">Categoria</label>
                 <Dropdown
@@ -279,6 +422,7 @@ export default function StudentHomePage() {
                   className={classNames('w-full', {
                     'p-invalid': submitted && !entity.category
                   })}
+                  required
                   style={{ overflow: 'hidden' }}
                 />
                 {submitted && !entity.category && <small className="p-invalid">Categoria é requerido.</small>}
@@ -297,34 +441,39 @@ export default function StudentHomePage() {
                   className={classNames('w-full', {
                     'p-invalid': submitted && !entity.activity
                   })}
+                  required
                   style={{ overflow: 'hidden' }}
                 />
                 {submitted && !entity.activity && <small className="p-invalid">Categoria é requerido.</small>}
               </div>
+              {entity.activity && activities.length && entity.activity.workloadInput && (
+                <div className="field">
+                  <label htmlFor="value">Valor do certificado</label>
+                  <InputText
+                    value={entity.value}
+                    onChange={(e: any) => {
+                      onInputChange(e, 'value');
+                    }}
+                    placeholder="Valor do certificado"
+                    style={{ overflow: 'hidden' }}
+                  />
+                </div>
+              )}
+              <div className="field">
+                <label htmlFor="link">Link (Opcional)</label>
+                <InputText
+                  value={entity.link}
+                  onChange={(e: any) => {
+                    onInputChange(e, 'link');
+                  }}
+                  placeholder="Link do arquivo"
+                  className={classNames('w-full', {
+                    'p-invalid': submitted && !entity.link
+                  })}
+                  style={{ overflow: 'hidden' }}
+                />
+              </div>
             </Dialog>
-          </div>
-        </div>
-        <div className="col-12 xl:col-4">
-          <div className="card">
-            <div className="flex w-full align-items-center justify-content-between">
-              <h5 className="mb-3">Status</h5>
-            </div>
-
-            <div className="mt-3">
-              <span>Progresso</span>
-              <ProgressBar color={documentStyle.getPropertyValue('--green-500')} className="mt-2" value={50}></ProgressBar>
-            </div>
-
-            <div className="mt-3">
-              <span>Progresso</span>
-              <ProgressBar color={documentStyle.getPropertyValue('--yellow-500')} className="mt-2" value={50}></ProgressBar>
-            </div>
-
-            <hr />
-            <div>
-              <span className="font-medium">Total</span>
-              <ProgressBar color={documentStyle.getPropertyValue('--blue-500')} className="mt-2" value={50}></ProgressBar>
-            </div>
           </div>
         </div>
       </div>

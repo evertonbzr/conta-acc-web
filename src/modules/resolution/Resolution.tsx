@@ -16,6 +16,7 @@ import { useGuard } from '../../core/hooks/useGuard';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Checkbox } from 'primereact/checkbox';
 import { useInfo } from '../../core/provider';
+import { Dropdown } from 'primereact/dropdown';
 
 export default function ResolutionPage() {
   const mainLink = '/resolution';
@@ -24,7 +25,8 @@ export default function ResolutionPage() {
     name: null,
     description: undefined,
     link: undefined,
-    isCurrent: false
+    isCurrent: false,
+    totalPoints: null
   };
 
   const { course } = useInfo();
@@ -91,7 +93,12 @@ export default function ResolutionPage() {
   const handleSave = async () => {
     setSubmitted(true);
     try {
-      const _entity = { ...entity, courseId: course.id };
+      const _entity = {
+        ...entity,
+        courseId: course.id,
+        totalPoints: Number(entity.totalPoints),
+        copyFrom: entity.copyFrom ? entity.copyFrom.id : null
+      };
 
       if (entity.id) {
         await api.put(`${mainLink}/${entity.id}`, _entity);
@@ -146,13 +153,30 @@ export default function ResolutionPage() {
             </span>
           </div>
           <div>
-            <Button label="Recarregar" size="small" icon="pi pi-refresh" className="mr-2" severity="info" onClick={() => getEntities()} />
+            <Button
+              label="Recarregar"
+              size="small"
+              icon="pi pi-refresh"
+              className="mr-2"
+              severity="info"
+              onClick={() => getEntities().then((data) => setEntities(data as any))}
+            />
             <Button label="Novo" size="small" icon="pi pi-plus" severity="success" className="mr-2" onClick={openNew} />
           </div>
         </div>
 
-        <DataTable size="small" stripedRows value={entities} emptyMessage="Nenhum dado encontrado." loading={loading} className="border-round" tableStyle={{ minWidth: '50rem' }}>
+        <DataTable
+          size="small"
+          stripedRows
+          value={entities}
+          emptyMessage="Nenhum dado encontrado."
+          loading={loading}
+          className="border-round"
+          tableStyle={{ minWidth: '50rem' }}
+        >
           <Column field="name" header="Nome"></Column>
+          <Column field="totalPoints" header="Total de pontos"></Column>
+
           <Column
             field="createdAt"
             header="Data de criação"
@@ -206,7 +230,16 @@ export default function ResolutionPage() {
         </DataTable>
       </div>
 
-      <Dialog closeOnEscape={false} visible={entityDialog} style={{ width: '450px' }} header={entity.id ? 'Editar Resolução' : 'Nova Resolução'} modal className="p-fluid" footer={entityDialogFooter} onHide={hideDialog}>
+      <Dialog
+        closeOnEscape={false}
+        visible={entityDialog}
+        style={{ width: '450px' }}
+        header={entity.id ? 'Editar Resolução' : 'Nova Resolução'}
+        modal
+        className="p-fluid"
+        footer={entityDialogFooter}
+        onHide={hideDialog}
+      >
         <div className="field">
           <label htmlFor="name">Nome</label>
           <InputText
@@ -222,6 +255,20 @@ export default function ResolutionPage() {
           {submitted && !entity.name && <small className="p-invalid">Nome é requerido.</small>}
         </div>
         <div className="field">
+          <label htmlFor="totalPoints">Total de pontos</label>
+          <InputText
+            id="totalPoints"
+            keyfilter="int"
+            value={entity.totalPoints}
+            onChange={(e) => onInputChange(e, 'totalPoints')}
+            required
+            className={classNames({
+              'p-invalid': submitted && !entity.name
+            })}
+          />
+          {submitted && !entity.name && <small className="p-invalid">Nome é requerido.</small>}
+        </div>
+        <div className="field">
           <label htmlFor="description">Descrição</label>
           <InputTextarea id="description" value={entity.description} onChange={(e) => onInputChange(e, 'description')} />
         </div>
@@ -229,6 +276,21 @@ export default function ResolutionPage() {
           <label htmlFor="link">Link</label>
           <InputText id="link" value={entity.link} onChange={(e) => onInputChange(e, 'link')} />
         </div>
+
+        {!entity.id && (
+          <div className="field">
+            <label htmlFor="copyFrom">Copiar de:</label>
+            <Dropdown
+              id="copyFrom"
+              value={entity.copyFrom}
+              options={entities}
+              optionLabel="name"
+              disabled={entities.length === 0}
+              placeholder="Selecione uma resolução (opcional)"
+              onChange={(e: any) => onInputChange(e, 'copyFrom')}
+            />
+          </div>
+        )}
 
         <div className="field">
           <div className="flex align-items-center">
